@@ -1,0 +1,196 @@
+const UserSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  role: { type: String, enum: ['customer', 'admin'], default: 'customer' },
+  createdAt: { type: Date, default: Date.now },
+});
+
+
+const ProductSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  description: { type: String },
+  price: { type: Number, required: true },
+  stock: { type: Number, default: 0 },
+  category: { type: String },
+  createdAt: { type: Date, default: Date.now },
+});
+
+
+const OrderSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  products: [
+    {
+      product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+      quantity: { type: Number, required: true },
+    }
+  ],
+  status: { type: String, enum: ['pending', 'shipped', 'delivered', 'cancelled'], default: 'pending' },
+  totalAmount: { type: Number, required: true },
+  createdAt: { type: Date, default: Date.now },
+});
+
+each order----> one userr and many productss
+
+
+one more role-- vendor
+
+vendor-- it manages orders and products
+admin-all--user, order, product
+customer -- manager-order, view--product
+
+products---fuzzy search 
+
+
+refresh token is permanent, and access token is generated using refresh token each time.
+
+1.role based access- middleware-- admin-vendor-customer
+2. add jwt-- in all routesss
+3. validations--- for input resp-enum 
+
+
+
+jwt addedd-- 
+add authjwt-- checking is token then only access
+role base access- fucntion
+
+CONCEPT OF REFRESH TOKEN AND ACCESS TOKEN
+
+FIRST CREATE ACCESS TOKEN USE TO AUTHINCATE user but accesstoken is for small lifespan
+so, we have concept of refresh token, which is used to create a new access token, when the access token expires.
+
+addedd jwt 
+
+functions to add role based access for each api
+
+FLOWWWWW
+instead of order CRUD, we have to make a cart-- model and it's crud.
+then checkout
+get orders
+update orderStatus
+
+
+exports.updateCart = async (req, res) => {
+  try {
+    const { productId, quantity } = req.body;
+    const userId = req.user.id;
+
+    let cart = await Cart.findOne({ user: userId });
+    if (!cart) return res.status(404).json({ message: "Cart not found" });
+
+    const productItem = cart.products.find(
+      (item) => item.product.toString() === productId
+    );
+
+    if (!productItem) {
+      return res.status(404).json({ message: "Product not found in cart" });
+    }
+
+    productItem.quantity = quantity;
+    cart.totalAmount = cart.products.reduce(
+      (sum, item) => sum + item.quantity * item.product.price,
+      0
+    );
+
+    await cart.save();
+    res.status(200).json({ message: "Cart updated", cart });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+WHY TO USE PROMISE.ALL WITH ASYNC AWAIT
+
+if we have multiple independent api, and we use await for both.  both won't start at the same time, fetch2 won't start till the fetch1 will complete
+
+await fetch1() -2
+await fetch2()-3
+
+therefore, it'll take more time, so we will use promise.all to reduce the time
+
+await Pormise.all([fetch1(), fetch2()])-- this will start with the same time, reducing the overall time
+
+CREATED CART  model
+IN THE cart  6 functionality
+1. add product to cart
+2. remove product from cart
+3. update product in the cart
+4. retrive or get cart
+5. clear cart
+6. checkout -- convert cart to order
+
+vendor role hasn't been added--
+
+after checkout-- broo leave ka soachi kya hai. jab man ho tab. this is not clg, you can't skip this like you did to clg implement stripe and webhooks, entire backed for ecommerce website will be done
+and also learnet a lot
+
+
+MICROSERVICES:
+contains independent serives and one communicator which connect all
+like in the e-commerce, 
+user-service
+product-service
+order-service
+communicator
+moderate exerice-- otherwise-- increase rish of heart health
+prebiotic and probiotic
+magnesium---recovery issue,  
+omega3--  brain and heart health
+energy balance 
+energy balance
+
+won't crash the entire webiste, if crash only for their specific service
+
+THINGS TO DO (13 FEB)
+update Cart - sometimes changes are updated sometimes no changes reflected
+checkout api
+add vendor role and admin role--- middleware
+
+implement stripe 
+
+const stripe = require("../util/stripe");
+const Cart = require("../models/cart.model");
+
+const createPaymentIntent = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Get cart details and calculate total
+    const cart = await Cart.findOne({ user: userId }).populate("products.product");
+    if (!cart || cart.products.length === 0) {
+      return res.status(400).json({ message: "Cart is empty" });
+    }
+
+    const totalAmount = cart.products.reduce(
+      (sum, item) => sum + item.quantity * item.product.price,
+      0
+    );
+
+    // Create Stripe PaymentIntent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: totalAmount * 100, // Convert to cents
+      currency: "usd",
+      metadata: { userId: userId, cartId: cart._id.toString() },
+    });
+
+    res.status(200).json({
+      clientSecret: paymentIntent.client_secret,
+      totalAmount,
+      message: "Payment intent created",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error creating payment intent",
+      error: error.message,
+    });
+  }
+};
+
+module.exports = { createPaymentIntent };
+
+
+
+
+
+
+
