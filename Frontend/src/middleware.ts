@@ -26,7 +26,7 @@ export default function middleware(request: NextRequest) {
 
     // better store the token in the cookies, as such middleware is the server side, not client side.
     // so middleware cannot acces local storage
-    const token = request.cookies.get('token')? .value;
+    const token = request.cookies.get('token')?.value;
     if (isProtectedRoute(pathname) && !token) {
         // If protected and no token, redirect to login
         const loginUrl = new URL('/signin', request.url);
