@@ -1,23 +1,12 @@
-"use client";
-import { useState, useEffect } from "react";
+
 import "../css/euclid-circular-a-font.css";
 import "../css/style.css";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
 
-import { ModalProvider } from "../context/QuickViewModalContext";
-import { CartModalProvider } from "../context/CartSidebarModalContext";
-import { ReduxProvider } from "@/redux/provider";
-import QuickViewModal from "@/components/Common/QuickViewModal";
-import CartSidebarModal from "@/components/Common/CartSidebarModal";
-import { PreviewSliderProvider } from "../context/PreviewSliderContext";
-import PreviewSliderModal from "@/components/Common/PreviewSlider";
-
-import ScrollToTop from "@/components/Common/ScrollToTop";
-import PreLoader from "@/components/Common/PreLoader";
-import { hasLocale, NextIntlClientProvider } from "next-intl";
-import { notFound, useParams } from "next/navigation";
+import { hasLocale } from "next-intl";
+import { notFound} from "next/navigation";
 import { routing } from "@/i18n/routing";
+import { LangChangeHandler } from "@/components/Header/LangChangeHandler";
+import ClientProvider from "@/components/Header/ClientProvider";
 
 export default async function RootLayout({
   children, params
@@ -28,35 +17,16 @@ export default async function RootLayout({
 
   const { locale } = await params;
 
-
+  const messages = (await import(`../../../messages/${locale}.json`)).default;
   if (!hasLocale(routing.locales, locale)) {
     notFound();
   }
-  console.log(locale, "paramsas localee")
+
   return (
     <html lang={locale} suppressHydrationWarning={true}>
+      <LangChangeHandler />
       <body>
-
-        <NextIntlClientProvider locale={locale} >
-
-          <ReduxProvider>
-            <CartModalProvider>
-              <ModalProvider>
-                <PreviewSliderProvider>
-                  <Header />
-                  {children}
-
-                  <QuickViewModal />
-                  <CartSidebarModal />
-                  <PreviewSliderModal />
-                </PreviewSliderProvider>
-              </ModalProvider>
-            </CartModalProvider>
-          </ReduxProvider>
-        </NextIntlClientProvider>
-        <ScrollToTop />
-        <Footer />
-
+        <ClientProvider locale={locale} messages={messages}>{children} </ClientProvider>
       </body>
     </html>
   );
